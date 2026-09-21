@@ -40,9 +40,12 @@ jobs:
         run: |
           if ! flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }} >android-build.log 2>&1; then
             tail -n 40 android-build.log
-            while IFS= read -r line; do
+            {
+              tail -n 20 android-build.log
+              grep -Ei "error:|failure:|failed|what went wrong|could not|exception|caused by|problem occurred" android-build.log || true
+            } | tail -n 10 | while IFS= read -r line; do
               echo "::error title=Android build::$line"
-            done < <(tail -n 30 android-build.log)
+            done
             exit 1
           fi
           cat android-build.log
