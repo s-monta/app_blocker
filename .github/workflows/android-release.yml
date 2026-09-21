@@ -17,9 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -36,7 +36,16 @@ jobs:
       - name: Test
         run: flutter test
       - name: Build signed APK
-        run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
+        shell: bash
+        run: |
+          if ! flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }} >android-build.log 2>&1; then
+            tail -n 40 android-build.log
+            while IFS= read -r line; do
+              echo "::error title=Android build::$line"
+            done < <(tail -n 30 android-build.log)
+            exit 1
+          fi
+          cat android-build.log
       - name: Rename APK
         run: cp build/app/outputs/flutter-apk/app-release.apk Focus-Gate.apk
       - name: Upload workflow artifact
