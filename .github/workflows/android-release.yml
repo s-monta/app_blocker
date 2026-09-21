@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.41.4"
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        run: flutter pub get
+      - name: Analyze
+        run: flutter analyze
+      - name: Test
+        run: flutter test
+      - name: Build signed APK
+        run: flutter build apk --release --build-name=1.0.${{ github.run_number }} --build-number=${{ github.run_number }}
+      - name: Rename APK
+        run: cp build/app/outputs/flutter-apk/app-release.apk Focus-Gate.apk
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Focus-Gate-APK-${{ github.run_number }}
+          path: Focus-Gate.apk
+          retention-days: 90
+      - name: Publish latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view latest >/dev/null 2>&1; then
+            gh release upload latest Focus-Gate.apk --clobber
+            gh release edit latest --title "Focus Gate 最新版" --notes "GitHub Actions build ${{ github.run_number }}（commit ${{ github.sha }}）"
+          else
+            gh release create latest Focus-Gate.apk --target "${{ github.sha }}" --title "Focus Gate 最新版" --notes "GitHub Actions build ${{ github.run_number }}"
+          fi

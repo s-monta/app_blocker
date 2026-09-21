@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Focus Gate</string>
+    <string name="accessibility_description">選択したアプリが設定時間中に開かれたことを検知し、ブロック画面を表示します。画面の内容や入力文字は収集しません。</string>
+</resources>
