@@ -15,14 +15,22 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, channelName).setMethodCallHandler { call, result ->
-            when (call.method) {
-                "getInstalledApps" -> result.success(getInstalledApps())
-                "isAccessibilityEnabled" -> result.success(isAccessibilityEnabled())
-                "openAccessibilitySettings" -> {
-                    startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
-                    result.success(null)
+            try {
+                when (call.method) {
+                    "getInstalledApps" -> result.success(getInstalledApps())
+                    "isAccessibilityEnabled" -> result.success(isAccessibilityEnabled())
+                    "openAccessibilitySettings" -> {
+                        startActivity(
+                            Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK,
+                            ),
+                        )
+                        result.success(null)
+                    }
+                    else -> result.notImplemented()
                 }
-                else -> result.notImplemented()
+            } catch (e: Exception) {
+                result.error("PLATFORM_ERROR", e.message, null)
             }
         }
     }

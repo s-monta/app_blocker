@@ -507,7 +507,11 @@ class _AppPickerPageState extends State<AppPickerPage> {
                           backgroundColor: Theme.of(
                             context,
                           ).colorScheme.secondaryContainer,
-                          child: Text(app.name.characters.first.toUpperCase()),
+                          child: Text(
+                            app.name.characters.isEmpty
+                                ? '?'
+                                : app.name.characters.first.toUpperCase(),
+                          ),
                         ),
                         title: Text(
                           app.name,

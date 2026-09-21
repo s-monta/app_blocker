@@ -17,6 +17,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   List<BlockRule> _rules = const [];
   bool _accessibilityEnabled = false;
   bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -37,15 +38,28 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   Future<void> _refresh() async {
-    final results = await Future.wait<Object>([
-      AppDatabase.instance.getRules(),
-      PlatformBridge.isAccessibilityEnabled(),
-    ]);
+    // Each call is isolated: a failure reading the accessibility state (or
+    // the database) must never leave the screen stuck on the loading
+    // spinner forever, and must never crash the whole app on startup.
+    List<BlockRule> rules = _rules;
+    bool accessibilityEnabled = _accessibilityEnabled;
+    String? error;
+    try {
+      rules = await AppDatabase.instance.getRules();
+    } catch (e) {
+      error = 'ルールの読み込みに失敗しました: $e';
+    }
+    try {
+      accessibilityEnabled = await PlatformBridge.isAccessibilityEnabled();
+    } catch (e) {
+      error ??= 'ユーザー補助設定の確認に失敗しました: $e';
+    }
     if (!mounted) return;
     setState(() {
-      _rules = results[0] as List<BlockRule>;
-      _accessibilityEnabled = results[1] as bool;
+      _rules = rules;
+      _accessibilityEnabled = accessibilityEnabled;
       _loading = false;
+      _error = error;
     });
   }
 
@@ -120,6 +134,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 112),
                 children: [
+                  if (_error != null) ...[
+                    _ErrorBanner(message: _error!),
+                    const SizedBox(height: 16),
+                  ],
                   _ServiceCard(
                     enabled: _accessibilityEnabled,
                     onTap: PlatformBridge.openAccessibilitySettings,
@@ -152,6 +170,33 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
             ),
     );
   }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+  final String message;
+
+  @override
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(14),
+    decoration: BoxDecoration(
+      color: const Color(0xFFFFE9D8),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.error_outline_rounded, color: Color(0xFF9A4E28)),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            message,
+            style: const TextStyle(color: Color(0xFF713C25), fontSize: 12),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _ServiceCard extends StatelessWidget {
